@@ -64,6 +64,10 @@ public:
     {
         this->prev = pPrev;
     }
+    void setHashCode(size_t pHashCode)
+    {
+        this->aHashCode = pHashCode;
+    }
 
 private:
     int aVersionNumber;
@@ -76,7 +80,6 @@ private:
 class VersionLinkedList
 {
 public:
-
     VersionLinkedList()
         : head(nullptr), tail(nullptr), versionCount(0)
     {
@@ -96,10 +99,28 @@ public:
         return this->tail;
     }
 
+
     // Setter methods
     void updateVersionCount()
     {
         this->versionCount++;
+    }
+
+    // Insert a new version into the linked list
+    void insertVersion(Version *newVersion)
+    {
+        if (this->head == NULL)
+        {
+            this->head = newVersion;
+        }
+        else
+        {
+            this->tail->setNext(newVersion);
+            newVersion->setPrev(this->tail);
+        }
+        this->tail = newVersion;
+
+        this->updateVersionCount();
     }
 
     void addVersion(string content)
@@ -242,8 +263,6 @@ public:
 
             current = current->getNext();
         }
-
-        
     }
 
     void compareVersions(int version1, int version2)
@@ -349,7 +368,6 @@ class Git322
 {
     // Version class
 public:
-
     VersionLinkedList *mylist;
     Git322()
     {
@@ -357,10 +375,10 @@ public:
     }
 
     // Read the contents of file.txt
-    std::string read_file()
+    std::string read_file(string filename)
     {
 
-        std::ifstream file("file.txt");
+        std::ifstream file(filename);
         std::string content;
         // Open and save the contents as a string, unless the file doesn't exist
         if (file.is_open())
@@ -376,7 +394,7 @@ public:
         else
         {
             std::cout << "Unable to open file: "
-                      << "file.txt" << std::endl;
+                      << filename << std::endl;
         }
 
         return content;
@@ -386,7 +404,7 @@ public:
     void add(string content)
     {
         // Add a new version to the linked list
-        this->mylist->addVersion(content);  
+        this->mylist->addVersion(content);
     }
     void remove(int version)
     {
@@ -463,17 +481,23 @@ void EnhancedGit322::saveVersionsToFile()
         Version *current = versions->getHead();
         while (current != nullptr)
         {
-            outfile << current->getVersionNumber() << "," << current->getContent() << endl;
+            outfile << current->getVersionNumber() << ",";
+            outfile << current->getHashCode() << ",";
+            string content = current->getContent();
+            size_t pos = 0;
+            string token;
+            while ((pos = content.find("\n")) != string::npos)
+            {
+                token = content.substr(0, pos);
+                outfile << token << "|";
+                content.erase(0, pos + 1);
+            }
+            outfile << content << endl;
             current = current->getNext();
         }
 
         // Close the file
         outfile.close();
-    }
-    else
-    {
-        // Print an error message if the file could not be opened
-        cerr << "Error: could not open file " << VERSION_FILE << " for writing." << endl;
     }
 }
 
@@ -485,30 +509,42 @@ void EnhancedGit322::loadVersionsFromFile()
     // Check if the file was opened successfully
     if (infile.is_open())
     {
+        // Clear the current list of versions
+        this->mylist = new VersionLinkedList();
+
         string line;
         while (getline(infile, line))
         {
-            // Split the line into version number and content
+            // Split the line into version number, hash value, and content
             stringstream ss(line);
-            string versionNumber, content;
+            string versionNumber, hashValue, content;
             getline(ss, versionNumber, ',');
+            getline(ss, hashValue, ',');
             getline(ss, content);
 
-            // Add the version to the linked list
-            this->mylist->addVersion(content);
-            this->mylist->updateVersionCount();
+            // Convert versionNumber from string to int
+            int versionInt = stoi(versionNumber);
+
+            // Convert hashValue from string to size_t
+            size_t hashCode = stoull(hashValue);
+
+            // Replace | with newline character
+            size_t pos = 0;
+            while ((pos = content.find("|")) != string::npos)
+            {
+                content.replace(pos, 1, "\n");
+            }
+
+            // Create a new Version object and add it to the linked list
+            Version *version = new Version(versionInt, content);
+            version->setHashCode(hashCode);
+            this->mylist->insertVersion(version);
         }
 
         // Close the file
         infile.close();
     }
-    else
-    {
-        // Print an error message if the file could not be opened
-        cerr << "Error: could not open file " << VERSION_FILE << " for reading." << endl;
-    }
 }
-
 
 int main()
 {
@@ -537,7 +573,7 @@ int main()
         case 'a':
         {
             // Add the content of the file to version control
-            string content = enhancedGit322.read_file();
+            string content = enhancedGit322.read_file("file.txt");
             enhancedGit322.add(content);
             break;
         }
