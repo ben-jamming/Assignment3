@@ -87,6 +87,14 @@ public:
     {
         return this->versionCount;
     }
+    Version *getHead()
+    {
+        return this->head;
+    }
+    Version *getTail()
+    {
+        return this->tail;
+    }
 
     // Setter methods
     void updateVersionCount()
@@ -342,10 +350,10 @@ class Git322
     // Version class
 public:
 
-    VersionLinkedList *versionList;
+    VersionLinkedList *mylist;
     Git322()
     {
-        versionList = new VersionLinkedList();
+        mylist = new VersionLinkedList();
     }
 
     // Read the contents of file.txt
@@ -378,40 +386,134 @@ public:
     void add(string content)
     {
         // Add a new version to the linked list
-        this->versionList->addVersion(content);  
+        this->mylist->addVersion(content);  
     }
     void remove(int version)
     {
         // Remove the version with the matching version number from the linked list
-        this->versionList->removeVersion(version);
+        this->mylist->removeVersion(version);
     }
     void load(int version)
     {
         // Loadd the version with the matching version number from the linked list
-        this->versionList->loadVersion(version);
+        this->mylist->loadVersion(version);
     }
     void print(void)
     {
         // Print all versions in the linked list
-        this->versionList->printVersionList();
+        this->mylist->printVersionList();
     }
     void compare(int version1, int version2)
     {
         // Compare the versions with the matching version numbers from the linked list
-        this->versionList->compareVersions(version1, version2);
+        this->mylist->compareVersions(version1, version2);
     }
     void search(string keyword)
     {
         // Search for the keyword in the linked list
-        this->versionList->searchVersionList(keyword);
+        this->mylist->searchVersionList(keyword);
     }
 
 };
 
+class EnhancedGit322 : public Git322
+{
+public:
+    // Constructor
+    EnhancedGit322();
+
+    // Destructor
+    ~EnhancedGit322();
+
+    // Save all versions to a file
+    void saveVersionsToFile();
+
+    // Load all versions from a file
+    void loadVersionsFromFile();
+
+private:
+    // Filename to save/load versions
+    const string VERSION_FILE = "file_versions.txt";
+};
+
+// Constructor
+EnhancedGit322::EnhancedGit322()
+{
+    // Load versions from file
+    loadVersionsFromFile();
+}
+
+// Destructor
+EnhancedGit322::~EnhancedGit322()
+{
+    // Save versions to file
+    saveVersionsToFile();
+}
+
+void EnhancedGit322::saveVersionsToFile()
+{
+    // Open the file for writing
+    ofstream outfile(VERSION_FILE);
+
+    // Check if the file was opened successfully
+    if (outfile.is_open())
+    {
+        // Loop through all versions and write them to the file
+        VersionLinkedList *versions = this->mylist;
+        Version *current = versions->getHead();
+        while (current != nullptr)
+        {
+            outfile << current->getVersionNumber() << "," << current->getContent() << endl;
+            current = current->getNext();
+        }
+
+        // Close the file
+        outfile.close();
+    }
+    else
+    {
+        // Print an error message if the file could not be opened
+        cerr << "Error: could not open file " << VERSION_FILE << " for writing." << endl;
+    }
+}
+
+void EnhancedGit322::loadVersionsFromFile()
+{
+    // Open the file for reading
+    ifstream infile(VERSION_FILE);
+
+    // Check if the file was opened successfully
+    if (infile.is_open())
+    {
+        string line;
+        while (getline(infile, line))
+        {
+            // Split the line into version number and content
+            stringstream ss(line);
+            string versionNumber, content;
+            getline(ss, versionNumber, ',');
+            getline(ss, content);
+
+            // Add the version to the linked list
+            this->mylist->addVersion(content);
+            this->mylist->updateVersionCount();
+        }
+
+        // Close the file
+        infile.close();
+    }
+    else
+    {
+        // Print an error message if the file could not be opened
+        cerr << "Error: could not open file " << VERSION_FILE << " for reading." << endl;
+    }
+}
+
+
 int main()
 {
-    // Initialize a new Git322 object
-    Git322 git322 = Git322();
+    // Initialize a new EnhancedGit322 object
+    EnhancedGit322 enhancedGit322 = EnhancedGit322();
 
     // Welcome message
     cout << "Welcome to the Comp322 file versioning system!" << endl;
@@ -435,8 +537,8 @@ int main()
         case 'a':
         {
             // Add the content of the file to version control
-            string content = git322.read_file();
-            git322.add(content);
+            string content = enhancedGit322.read_file();
+            enhancedGit322.add(content);
             break;
         }
         case 'r':
@@ -445,7 +547,7 @@ int main()
             int version;
             cout << "Enter the number of the version that you want to delete: ";
             cin >> version;
-            git322.remove(version);
+            enhancedGit322.remove(version);
             break;
         }
         case 'l':
@@ -454,13 +556,13 @@ int main()
             int version;
             cout << "Which version would you like to load? ";
             cin >> version;
-            git322.load(version);
+            enhancedGit322.load(version);
             break;
         }
         case 'p':
         {
             // Print the detailed list of all versions
-            git322.print();
+            enhancedGit322.print();
             break;
         }
         case 'c':
@@ -471,7 +573,7 @@ int main()
             cin >> version1;
             cout << "Please enter the number of the second version to compare: ";
             cin >> version2;
-            git322.compare(version1, version2);
+            enhancedGit322.compare(version1, version2);
             break;
         }
         case 's':
@@ -481,7 +583,7 @@ int main()
             cout << "Please enter the keyword that you are looking for: ";
             cin.ignore();
             getline(cin, keyword);
-            git322.search(keyword);
+            enhancedGit322.search(keyword);
             break;
         }
         case 'e':
